@@ -10,10 +10,10 @@ public static class GameRenderer
 {
     private const string Block = "██";
 
-    public static IRenderable Render(GameState game)
+    public static IRenderable Render(GameState game, HighScore? highScore = null)
     {
         var board = new Markup(RenderBoard(game));
-        var info = new Panel(new Markup(RenderInfo(game)))
+        var info = new Panel(new Markup(RenderInfo(game, highScore)))
         {
             Header = new PanelHeader("信息"),
             Border = BoxBorder.Rounded,
@@ -61,10 +61,11 @@ public static class GameRenderer
         return sb.ToString();
     }
 
-    private static string RenderInfo(GameState game)
+    private static string RenderInfo(GameState game, HighScore? highScore)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"分数(十六进制)：0x{game.Score:X}");
+        sb.AppendLine($"最高分：{(highScore is null ? "暂无" : $"0x{highScore.Score:X}")}");
         sb.AppendLine($"等级：{game.Level}");
         sb.AppendLine($"消行数：{game.LinesCleared}");
         sb.AppendLine();

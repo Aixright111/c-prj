@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Tetris.Core\Tetris.Core.csproj" />
     <ProjectReference Include="..\..\src\Tetris.Console\Tetris.Console.csproj" />
+    <ProjectReference Include="..\..\src\Tetris.Data\Tetris.Data.csproj" />
   </ItemGroup>
 
 </Project>

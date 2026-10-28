@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Spectre.Console;
 using Tetris.Core;
+using Tetris.Data;
 
 namespace Tetris.Console;
 
@@ -26,6 +27,9 @@ public static class Program
 
     private static void RunGame()
     {
+        var store = new HighScoreStore(Path.Combine(AppContext.BaseDirectory, "highscore.xml"));
+        var highScore = store.Load();
+
         var game = new GameState();
         bool quit = false;
 
@@ -50,10 +54,18 @@ public static class Program
                         lastTick = now;
                     }
 
-                    ctx.UpdateTarget(GameRenderer.Render(game));
+                    ctx.UpdateTarget(GameRenderer.Render(game, highScore));
                     Thread.Sleep(10);
                 }
             });
+
+        bool newRecord = false;
+        if (game.IsGameOver && (highScore is null || game.Score > highScore.Score))
+        {
+            highScore = new HighScore(game.Score, game.LinesCleared, game.Level, DateTime.Now);
+            store.Save(highScore);
+            newRecord = true;
+        }
 
         AnsiConsole.Clear();
         var panel = new Panel(
@@ -61,8 +73,10 @@ public static class Program
                 $"[bold red]游戏结束[/]\n\n" +
                 $"分数(十六进制)：0x{game.Score:X}\n" +
                 $"等级：{game.Level}\n" +
-                $"消行数：{game.LinesCleared}\n\n" +
-                "按任意键退出…"))
+                $"消行数：{game.LinesCleared}\n" +
+                $"最高分：{(highScore is null ? "暂无" : $"0x{highScore.Score:X}")}\n" +
+                (newRecord ? "\n[green]新纪录！[/]\n" : "") +
+                "\n按任意键退出…"))
         {
             Header = new PanelHeader("俄罗斯方块 TETRIS", Justify.Center),
             Border = BoxBorder.Rounded,
