@@ -19,6 +19,9 @@ artifacts/
 .vs/
 .vscode/
 
+# Claude Code
+.claude/
+
 # Test results
 [Tt]est[Rr]esult*/
 *.trx
