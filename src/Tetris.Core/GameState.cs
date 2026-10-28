@@ -30,6 +30,18 @@ public sealed class GameState
         _next = CreatePiece(DrawPiece());
     }
 
+    /// <summary>仅供测试：用指定的棋盘与方块构造确定性的状态。</summary>
+    internal GameState(Board board, Tetromino current, int currentX, int currentY, Tetromino next)
+    {
+        _rng = new Randomizer(1);
+        _board = board;
+        _current = current;
+        _currentX = currentX;
+        _currentY = currentY;
+        _next = next;
+        _bag = new Queue<PieceType>();
+    }
+
     public Board Board => _board;
     public Tetromino Current => _current;
     public int CurrentX => _currentX;
