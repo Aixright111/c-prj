@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using Spectre.Console;
 using Tetris.Core;
 using Tetris.Data;
@@ -29,6 +30,7 @@ public static class Program
     {
         var store = new HighScoreStore(Path.Combine(AppContext.BaseDirectory, "highscore.xml"));
         var highScore = store.Load();
+        var leaderboard = new LeaderboardStore(Path.Combine(AppContext.BaseDirectory, "scores.db"));
 
         var game = new GameState();
         bool quit = false;
@@ -67,16 +69,32 @@ public static class Program
             newRecord = true;
         }
 
+        if (game.IsGameOver && game.Score > 0)
+            leaderboard.Add(new HighScore(game.Score, game.LinesCleared, game.Level, DateTime.Now));
+
         AnsiConsole.Clear();
-        var panel = new Panel(
-            new Markup(
-                $"[bold red]游戏结束[/]\n\n" +
-                $"分数(十六进制)：0x{game.Score:X}\n" +
-                $"等级：{game.Level}\n" +
-                $"消行数：{game.LinesCleared}\n" +
-                $"最高分：{(highScore is null ? "暂无" : $"0x{highScore.Score:X}")}\n" +
-                (newRecord ? "\n[green]新纪录！[/]\n" : "") +
-                "\n按任意键退出…"))
+        var sb = new StringBuilder();
+        sb.Append("[bold red]游戏结束[/]\n\n");
+        sb.Append($"分数(十六进制)：0x{game.Score:X}\n");
+        sb.Append($"等级：{game.Level}\n");
+        sb.Append($"消行数：{game.LinesCleared}\n");
+        sb.Append($"最高分：{(highScore is null ? "暂无" : $"0x{highScore.Score:X}")}\n");
+        if (newRecord)
+            sb.Append("\n[green]新纪录！[/]\n");
+
+        var top = leaderboard.Top(5);
+        if (top.Count > 0)
+        {
+            sb.Append("\n[bold]排行榜 (Top 5)：[/]\n");
+            for (int i = 0; i < top.Count; i++)
+            {
+                var s = top[i];
+                sb.Append($"  {i + 1}. 0x{s.Score:X}  (等级 {s.Level}，消行 {s.Lines})\n");
+            }
+        }
+        sb.Append("\n按任意键退出…");
+
+        var panel = new Panel(new Markup(sb.ToString()))
         {
             Header = new PanelHeader("俄罗斯方块 TETRIS", Justify.Center),
             Border = BoxBorder.Rounded,

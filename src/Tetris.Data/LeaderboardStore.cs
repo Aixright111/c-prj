@@ -1,0 +1,96 @@
+using Microsoft.Data.Sqlite;
+using Tetris.Core;
+
+namespace Tetris.Data;
+
+/// <summary>
+/// SQLite 排行榜持久化。与 HighScoreStore 一样，所有 IO / 数据库异常都被吞掉：
+/// Add 返回 bool，Top 返回空列表，绝不向上抛异常导致程序崩溃。
+/// </summary>
+public sealed class LeaderboardStore
+{
+    private readonly string _connectionString;
+
+    public LeaderboardStore(string dbPath)
+    {
+        _connectionString = new SqliteConnectionStringBuilder { DataSource = dbPath }.ToString();
+        EnsureSchema();
+    }
+
+    public bool Add(HighScore score)
+    {
+        try
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText =
+                "INSERT INTO HighScores (Score, Lines, Level, AchievedAt) VALUES ($score, $lines, $level, $achievedAt);";
+            command.Parameters.AddWithValue("$score", score.Score);
+            command.Parameters.AddWithValue("$lines", score.Lines);
+            command.Parameters.AddWithValue("$level", score.Level);
+            command.Parameters.AddWithValue("$achievedAt", score.AchievedAt.ToString("o"));
+            command.ExecuteNonQuery();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public IReadOnlyList<HighScore> Top(int count)
+    {
+        var result = new List<HighScore>();
+        try
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText =
+                "SELECT Score, Lines, Level, AchievedAt FROM HighScores ORDER BY Score DESC LIMIT $count;";
+            command.Parameters.AddWithValue("$count", count);
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                result.Add(new HighScore(
+                    reader.GetInt32(0),
+                    reader.GetInt32(1),
+                    reader.GetInt32(2),
+                    DateTime.Parse(reader.GetString(3), null, System.Globalization.DateTimeStyles.RoundtripKind)));
+            }
+        }
+        catch
+        {
+            return Array.Empty<HighScore>();
+        }
+        return result;
+    }
+
+    private void EnsureSchema()
+    {
+        try
+        {
+            var directory = Path.GetDirectoryName(Path.GetFullPath(new SqliteConnectionStringBuilder(_connectionString).DataSource));
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText =
+                "CREATE TABLE IF NOT EXISTS HighScores (" +
+                "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "Score INTEGER NOT NULL, " +
+                "Lines INTEGER NOT NULL, " +
+                "Level INTEGER NOT NULL, " +
+                "AchievedAt TEXT NOT NULL);";
+            command.ExecuteNonQuery();
+        }
+        catch
+        {
+            // 数据库不可用（如只读目录）时静默降级：Add/Top 都会返回失败/空。
+        }
+    }
+}
