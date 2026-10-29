@@ -39,4 +39,16 @@ public class GameRendererTests
         var ex = Record.Exception(() => console.Write(GameRenderer.Render(game)));
         Assert.Null(ex);
     }
+
+    [Fact]
+    public void RenderVersus_FreshGame_ContainsBothPlayers()
+    {
+        var console = new TestConsole();
+        var game = new VersusGame(42);
+
+        console.Write(GameRenderer.RenderVersus(game));
+
+        Assert.Contains("玩家1", console.Output);
+        Assert.Contains("玩家2", console.Output);
+    }
 }

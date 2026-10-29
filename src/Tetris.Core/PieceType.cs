@@ -1,6 +1,6 @@
 namespace Tetris.Core;
 
-/// <summary>七种标准俄罗斯方块形状。</summary>
+/// <summary>七种标准俄罗斯方块形状，外加双人对战中的垃圾行。</summary>
 public enum PieceType
 {
     I,
@@ -9,5 +9,6 @@ public enum PieceType
     O,
     S,
     T,
-    Z
+    Z,
+    Garbage
 }

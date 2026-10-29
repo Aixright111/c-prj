@@ -93,6 +93,22 @@ public sealed class GameState
             _paused = !_paused;
     }
 
+    /// <summary>
+    /// 双人对战中接收对方送来的垃圾行：棋盘底部插入 count 行，
+    /// 活动方块随棋盘上移；若已有内容被挤出或活动方块被顶出顶部，则游戏结束。
+    /// </summary>
+    public void ApplyGarbage(int count)
+    {
+        if (_gameOver || count <= 0)
+            return;
+
+        bool overflow = _board.AddGarbageLines(count);
+        _currentY -= count;
+
+        if (overflow || !_board.CanPlace(_current, _currentX, _currentY))
+            _gameOver = true;
+    }
+
     /// <summary>深拷贝当前状态。克隆后与原状态相互独立。</summary>
     public GameState Clone()
     {

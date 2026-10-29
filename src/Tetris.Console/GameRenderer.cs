@@ -32,6 +32,44 @@ public static class GameRenderer
         };
     }
 
+    public static IRenderable RenderVersus(VersusGame game)
+    {
+        var grid = new Grid();
+        grid.AddColumn();
+        grid.AddColumn();
+        grid.AddRow(
+            RenderPlayerPanel(game.Player1, "玩家1"),
+            RenderPlayerPanel(game.Player2, "玩家2"));
+
+        return new Panel(grid)
+        {
+            Header = new PanelHeader("双人对战 TETRIS", Justify.Center),
+            Border = BoxBorder.Rounded,
+        };
+    }
+
+    private static Panel RenderPlayerPanel(GameState game, string label)
+    {
+        var sb = new StringBuilder();
+        sb.Append(RenderBoard(game));
+        sb.AppendLine();
+        sb.AppendLine($"分数(十六进制)：0x{game.Score:X}");
+        sb.AppendLine($"等级：{game.Level}");
+        sb.AppendLine($"消行数：{game.LinesCleared}");
+        sb.AppendLine();
+        sb.AppendLine("下一个：");
+        sb.Append(RenderPiece(game.Next));
+        if (game.IsPaused)
+            sb.AppendLine("[yellow]【已暂停】[/]");
+
+        return new Panel(new Markup(sb.ToString()))
+        {
+            Header = new PanelHeader(label, Justify.Center),
+            Border = BoxBorder.Rounded,
+            Padding = new Padding(1, 1),
+        };
+    }
+
     private static string RenderBoard(GameState game)
     {
         var board = game.Board;
@@ -110,6 +148,7 @@ public static class GameRenderer
         PieceType.S => "#00d75f",
         PieceType.T => "#af00ff",
         PieceType.Z => "#ff0000",
+        PieceType.Garbage => "#808080",
         _ => "#ffffff"
     };
 }

@@ -58,6 +58,31 @@ public sealed class Board
         return cleared;
     }
 
+    /// <summary>
+    /// 在棋盘底部插入 count 行垃圾行，并把已有内容整体上移 count 行。
+    /// 每行垃圾行除一个随机空位外全部填满。返回顶部是否有内容被挤出棋盘。
+    /// </summary>
+    public bool AddGarbageLines(int count)
+    {
+        bool overflow = false;
+        for (int y = 0; y < count; y++)
+            for (int x = 0; x < Width; x++)
+                if (_cells[x, y] is not null)
+                    overflow = true;
+
+        for (int y = count; y < Height; y++)
+            CopyRow(y, y - count);
+
+        for (int g = 0; g < count; g++)
+        {
+            int gap = System.Random.Shared.Next(Width);
+            int row = Height - count + g;
+            for (int x = 0; x < Width; x++)
+                _cells[x, row] = x == gap ? null : PieceType.Garbage;
+        }
+        return overflow;
+    }
+
     public Board Clone()
     {
         var clone = new Board();

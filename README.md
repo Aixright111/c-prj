@@ -8,8 +8,10 @@
 - 消行计分：一次消除 k 行得 `100 × k` 分，分数以**十六进制**显示
 - 等级随消行数提升，下落速度逐级加快
 - 暂停、游戏结束、下一个方块预览
+- **双人对战**：两块棋盘并排、各自独立按键，一方一次消 2 行及以上向对方棋盘送入 1 行垃圾行，先被顶出棋盘者落败
 - **高分持久化（XML）**：重启后读取历史最高分
 - **排行榜（SQLite）**：游戏结束展示历史 Top 5
+- **双人胜场榜（SQLite）**：独立统计双方胜场数，与单人排行榜分离
 - **健壮性**：存档文件缺失 / 损坏 / 被占用 / 只读、窗口调整、快速 / 同时按键、无效输入均不会导致崩溃
 
 ## 环境要求
@@ -32,6 +34,10 @@ dotnet test tests/Tetris.Core.Tests/Tetris.Core.Tests.csproj
 
 ## 操作按键
 
+启动后进入主菜单，按 `1` 单人模式、`2` 双人对战。
+
+### 单人模式
+
 | 按键 | 功能 |
 | --- | --- |
 | ← / → | 左右移动 |
@@ -42,6 +48,18 @@ dotnet test tests/Tetris.Core.Tests/Tetris.Core.Tests.csproj
 | P | 暂停 / 继续 |
 | Q 或 Esc | 退出游戏 |
 
+### 双人对战
+
+| 玩家1 按键 | 玩家2 按键 | 功能 |
+| --- | --- | --- |
+| ← / → | A / D | 左右移动 |
+| ↓ | S | 软降 |
+| ↑ 或 X | W | 顺时针旋转 |
+| Z | Q | 逆时针旋转 |
+| 空格 | E | 硬降（直接落底） |
+| P | P | 暂停 / 继续 |
+| Esc | Esc | 退出游戏 |
+
 ## 项目结构
 
 ```
@@ -51,7 +69,7 @@ Tetris.slnx
 │  ├─ Tetris.Console/  控制台界面（Spectre.Console 渲染 + 游戏主循环）
 │  └─ Tetris.Data/     数据持久化（XML 高分 + SQLite 排行榜）
 └─ tests/
-   └─ Tetris.Core.Tests/  单元测试（xUnit，53 个用例）
+   └─ Tetris.Core.Tests/  单元测试（xUnit，65 个用例）
 ```
 
 ### 分层设计
@@ -65,6 +83,7 @@ Tetris.slnx
 运行后会在程序目录（`AppContext.BaseDirectory`）生成：
 
 - `highscore.xml` —— 历史最高分
-- `scores.db` —— SQLite 排行榜数据库
+- `scores.db` —— SQLite 单人排行榜数据库
+- `versus.db` —— SQLite 双人胜场榜数据库
 
-两个文件均已加入 `.gitignore`，且任何读写失败都不会导致程序崩溃。
+这些文件均已加入 `.gitignore`（`*.db` / `highscore.xml`），且任何读写失败都不会导致程序崩溃。
