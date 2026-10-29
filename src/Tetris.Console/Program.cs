@@ -12,11 +12,18 @@ public static class Program
     {
         try
         {
-            int mode = SelectMode();
-            if (mode == 2)
-                RunVersus();
-            else if (mode == 1)
-                RunGame();
+            while (true)
+            {
+                int mode = SelectMode();
+                if (mode == 1)
+                    RunGame();
+                else if (mode == 2)
+                    RunVersus();
+                else if (mode == 3)
+                    ShowLeaderboard();
+                else
+                    return; // Esc 退出
+            }
         }
         catch (Exception ex)
         {
@@ -36,8 +43,9 @@ public static class Program
         AnsiConsole.Write(new Panel(new Markup(
             "[bold]俄罗斯方块 TETRIS[/]\n\n" +
             "[yellow]1[/]  单人模式\n" +
-            "[yellow]2[/]  双人对战\n\n" +
-            "[grey]按 1 或 2 选择，Esc 退出[/]"))
+            "[yellow]2[/]  双人对战\n" +
+            "[yellow]3[/]  排行榜\n\n" +
+            "[grey]按 1 / 2 / 3 选择，Esc 退出[/]"))
         {
             Header = new PanelHeader("主菜单", Justify.Center),
             Border = BoxBorder.Rounded,
@@ -52,14 +60,73 @@ public static class Program
                 case ConsoleKey.NumPad1: return 1;
                 case ConsoleKey.D2:
                 case ConsoleKey.NumPad2: return 2;
+                case ConsoleKey.D3:
+                case ConsoleKey.NumPad3: return 3;
                 case ConsoleKey.Escape: return -1;
             }
         }
     }
 
+    private static string SelectIdentity()
+    {
+        AnsiConsole.Clear();
+        AnsiConsole.Write(new Panel(new Markup(
+            "[bold]选择身份[/]\n\n" +
+            "[yellow]1[/]  游客模式\n" +
+            "[yellow]2[/]  登录模式（输入昵称）\n\n" +
+            "[grey]按 1 / 2 选择，Esc 返回[/]"))
+        {
+            Header = new PanelHeader("身份选择", Justify.Center),
+            Border = BoxBorder.Rounded,
+        });
+
+        while (true)
+        {
+            var key = System.Console.ReadKey(true).Key;
+            switch (key)
+            {
+                case ConsoleKey.D1:
+                case ConsoleKey.NumPad1: return "游客";
+                case ConsoleKey.D2:
+                case ConsoleKey.NumPad2:
+                {
+                    var nickname = AnsiConsole.Ask<string>("请输入昵称：");
+                    return string.IsNullOrWhiteSpace(nickname) ? "游客" : nickname.Trim();
+                }
+                case ConsoleKey.Escape: return "游客";
+            }
+        }
+    }
+
+    private static void ShowLeaderboard()
+    {
+        var store = new LeaderboardStore(Path.Combine(AppContext.BaseDirectory, "scores.db"));
+
+        AnsiConsole.Clear();
+        var sb = new StringBuilder();
+        sb.Append("[bold]排行榜 (Top 10)：[/]\n");
+        var top = store.Top(10);
+        if (top.Count == 0)
+            sb.Append("  [grey]暂无记录[/]\n");
+        else
+            for (int i = 0; i < top.Count; i++)
+                sb.Append($"  {i + 1}. {EscapeName(top[i].Name)}  0x{top[i].Score:X}  (等级 {top[i].Level}，消行 {top[i].Lines})\n");
+        sb.Append("\n按任意键返回菜单…");
+
+        var panel = new Panel(new Markup(sb.ToString()))
+        {
+            Header = new PanelHeader("排行榜", Justify.Center),
+            Border = BoxBorder.Rounded,
+        };
+        AnsiConsole.Write(panel);
+        System.Console.ReadKey(true);
+    }
+
+    private static string EscapeName(string name) =>
+        Markup.Escape(string.IsNullOrWhiteSpace(name) ? "游客" : name);
+
     private static void RunVersus()
     {
-        var versusStore = new VersusLeaderboardStore(Path.Combine(AppContext.BaseDirectory, "versus.db"));
         var game = new VersusGame();
         bool quit = false;
 
@@ -99,16 +166,7 @@ public static class Program
                 }
             });
 
-        if (game.Winner is PlayerSide winner)
-        {
-            var (winnerScore, loserScore) = winner == PlayerSide.Player1
-                ? (game.Player1.Score, game.Player2.Score)
-                : (game.Player2.Score, game.Player1.Score);
-            versusStore.RecordMatch(winner, winnerScore, loserScore);
-        }
-
         AnsiConsole.Clear();
-        var stats = versusStore.GetStats();
         var sb = new StringBuilder();
         sb.Append("[bold red]对局结束[/]\n\n");
         sb.Append($"玩家1 分数：0x{game.Player1.Score:X}\n");
@@ -117,11 +175,7 @@ public static class Program
             sb.Append($"\n[bold green]{(w == PlayerSide.Player1 ? "玩家1" : "玩家2")} 获胜！[/]\n");
         else
             sb.Append("\n[grey]已退出对局[/]\n");
-        sb.Append("\n[bold]胜场榜：[/]\n");
-        sb.Append($"  玩家1 胜 {stats.Player1Wins} 场\n");
-        sb.Append($"  玩家2 胜 {stats.Player2Wins} 场\n");
-        sb.Append($"  总对局 {stats.TotalMatches} 场\n");
-        sb.Append("\n按任意键退出…");
+        sb.Append("\n按任意键返回菜单…");
 
         var panel = new Panel(new Markup(sb.ToString()))
         {
@@ -173,6 +227,8 @@ public static class Program
         var highScore = store.Load();
         var leaderboard = new LeaderboardStore(Path.Combine(AppContext.BaseDirectory, "scores.db"));
 
+        var name = SelectIdentity();
+
         var game = new GameState();
         bool quit = false;
 
@@ -211,11 +267,12 @@ public static class Program
         }
 
         if (game.IsGameOver && game.Score > 0)
-            leaderboard.Add(new HighScore(game.Score, game.LinesCleared, game.Level, DateTime.Now));
+            leaderboard.Add(new HighScore(game.Score, game.LinesCleared, game.Level, DateTime.Now, name));
 
         AnsiConsole.Clear();
         var sb = new StringBuilder();
         sb.Append("[bold red]游戏结束[/]\n\n");
+        sb.Append($"昵称：{EscapeName(name)}\n");
         sb.Append($"分数(十六进制)：0x{game.Score:X}\n");
         sb.Append($"等级：{game.Level}\n");
         sb.Append($"消行数：{game.LinesCleared}\n");
@@ -230,10 +287,10 @@ public static class Program
             for (int i = 0; i < top.Count; i++)
             {
                 var s = top[i];
-                sb.Append($"  {i + 1}. 0x{s.Score:X}  (等级 {s.Level}，消行 {s.Lines})\n");
+                sb.Append($"  {i + 1}. {EscapeName(s.Name)}  0x{s.Score:X}  (等级 {s.Level}，消行 {s.Lines})\n");
             }
         }
-        sb.Append("\n按任意键退出…");
+        sb.Append("\n按任意键返回菜单…");
 
         var panel = new Panel(new Markup(sb.ToString()))
         {

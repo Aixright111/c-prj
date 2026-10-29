@@ -25,7 +25,8 @@ public sealed class LeaderboardStore
             connection.Open();
             using var command = connection.CreateCommand();
             command.CommandText =
-                "INSERT INTO HighScores (Score, Lines, Level, AchievedAt) VALUES ($score, $lines, $level, $achievedAt);";
+                "INSERT INTO HighScores (Name, Score, Lines, Level, AchievedAt) VALUES ($name, $score, $lines, $level, $achievedAt);";
+            command.Parameters.AddWithValue("$name", score.Name);
             command.Parameters.AddWithValue("$score", score.Score);
             command.Parameters.AddWithValue("$lines", score.Lines);
             command.Parameters.AddWithValue("$level", score.Level);
@@ -48,17 +49,18 @@ public sealed class LeaderboardStore
             connection.Open();
             using var command = connection.CreateCommand();
             command.CommandText =
-                "SELECT Score, Lines, Level, AchievedAt FROM HighScores ORDER BY Score DESC LIMIT $count;";
+                "SELECT Name, Score, Lines, Level, AchievedAt FROM HighScores ORDER BY Score DESC LIMIT $count;";
             command.Parameters.AddWithValue("$count", count);
 
             using var reader = command.ExecuteReader();
             while (reader.Read())
             {
                 result.Add(new HighScore(
-                    reader.GetInt32(0),
                     reader.GetInt32(1),
                     reader.GetInt32(2),
-                    DateTime.Parse(reader.GetString(3), null, System.Globalization.DateTimeStyles.RoundtripKind)));
+                    reader.GetInt32(3),
+                    DateTime.Parse(reader.GetString(4), null, System.Globalization.DateTimeStyles.RoundtripKind),
+                    reader.GetString(0)));
             }
         }
         catch
@@ -82,11 +84,17 @@ public sealed class LeaderboardStore
             command.CommandText =
                 "CREATE TABLE IF NOT EXISTS HighScores (" +
                 "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "Name TEXT NOT NULL DEFAULT '', " +
                 "Score INTEGER NOT NULL, " +
                 "Lines INTEGER NOT NULL, " +
                 "Level INTEGER NOT NULL, " +
                 "AchievedAt TEXT NOT NULL);";
             command.ExecuteNonQuery();
+
+            // 迁移：旧版表无 Name 列，尝试补充（已存在则忽略）
+            using var migrate = connection.CreateCommand();
+            migrate.CommandText = "ALTER TABLE HighScores ADD COLUMN Name TEXT NOT NULL DEFAULT '';";
+            try { migrate.ExecuteNonQuery(); } catch { /* 列已存在 */ }
         }
         catch
         {

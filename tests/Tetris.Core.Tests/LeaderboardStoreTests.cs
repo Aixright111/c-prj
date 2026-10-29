@@ -60,7 +60,7 @@ public class LeaderboardStoreTests : IDisposable
     {
         var store = new LeaderboardStore(PathOf("fields.db"));
         var achieved = new DateTime(2026, 10, 28, 14, 5, 30, DateTimeKind.Utc);
-        store.Add(new HighScore(0x2B4C, 12, 4, achieved));
+        store.Add(new HighScore(0x2B4C, 12, 4, achieved, "小明"));
 
         var top = store.Top(1);
         var record = Assert.Single(top);
@@ -69,6 +69,7 @@ public class LeaderboardStoreTests : IDisposable
         Assert.Equal(12, record.Lines);
         Assert.Equal(4, record.Level);
         Assert.Equal(achieved, record.AchievedAt);
+        Assert.Equal("小明", record.Name);
     }
 
     [Fact]
